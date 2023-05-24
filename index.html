@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>JSON Viewer</title>
+  <style>
+    /* CSS styling for the JSON viewer */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      border-radius: 5px;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-top: 0;
+    }
+    
+    label {
+      font-weight: bold;
+      color: #555;
+      display: block;
+      margin-bottom: 10px;
+    }
+    
+    #json-input {
+      width: 100%;
+      height: 200px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-family: Consolas, monospace;
+    }
+    
+    #json-output {
+      width: 100%;
+      border: 1px solid #ccc;
+      padding: 10px;
+      background-color: #f9f9f9;
+      font-family: Consolas, monospace;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    
+    .error-message {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    
+    .toggle-btn {
+      display: block;
+      margin-top: 20px;
+      cursor: pointer;
+      color: #555;
+      text-decoration: underline;
+      transition: color 0.3s;
+    }
+    
+    .toggle-btn:hover {
+      color: #333;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .json-properties {
+      margin-left: 20px;
+    }
+    
+    .json-property {
+      margin-bottom: 10px;
+    }
+    
+    .json-key {
+      color: #2d96b8;
+      font-weight: bold;
+    }
+    
+    .json-string {
+      color: #7bc18e;
+    }
+    
+    .json-boolean {
+      color: #f48c06;
+    }
+    
+    .json-number {
+      color: #9a5cb3;
+    }
+    
+    .export-btn {
+      display: block;
+      margin-top: 20px;
+      background-color: #2d96b8;
+      color: #fff;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .export-btn:hover {
+      background-color: #1b6e82;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>JSON Viewer</h1>
+  
+    <label for="json-input">Enter JSON:</label>
+    <textarea id="json-input" placeholder="Enter valid JSON here..."></textarea>
+  
+    <h2>Parsed JSON:</h2>
+    <pre id="json-output"></pre>
+    <p class="error-message" id="error-message"></p>
+    
+    <div id="toggle-btn" class="toggle-btn hidden">Toggle Properties</div>
+    <div id="json-properties" class="json-properties hidden"></div>
+
+    <button id="export-btn" class="export-btn hidden">Export Parsed JSON</button>
+  </div>
+
+  <script>
+    // Get references to HTML elements
+    const jsonInput = document.getElementById('json-input');
+    const jsonOutput = document.getElementById('json-output');
+    const errorMessage = document.getElementById('error-message');
+    const toggleBtn = document.getElementById('toggle-btn');
+    const jsonProperties = document.getElementById('json-properties');
+    const exportBtn = document.getElementById('export-btn');
+
+    // Add event listener for input changes
+    jsonInput.addEventListener('input', function() {
+      const inputText = jsonInput.value;
+
+      try {
+        // Parse the JSON input
+        const parsedJSON = JSON.parse(inputText);
+
+        // Convert the parsed JSON back to a string with proper indentation
+        const jsonString = JSON.stringify(parsedJSON, null, 2);
+
+        // Set the formatted JSON string as the output
+        jsonOutput.innerHTML = syntaxHighlight(jsonString);
+        errorMessage.textContent = ''; // Clear any previous error messages
+        
+        // Generate JSON properties
+        generateProperties(parsedJSON);
+        
+        // Show the toggle button and properties
+        toggleBtn.classList.remove('hidden');
+        jsonProperties.classList.remove('hidden');
+        exportBtn.classList.remove('hidden');
+      } catch (error) {
+        // If there's an error parsing the JSON, display the error message
+        jsonOutput.textContent = '';
+        errorMessage.textContent = 'Invalid JSON: ' + error.message;
+        
+        // Hide the toggle button, properties, and export button
+        toggleBtn.classList.add('hidden');
+        jsonProperties.classList.add('hidden');
+        exportBtn.classList.add('hidden');
+      }
+    });
+    
+    // Toggle properties visibility
+    toggleBtn.addEventListener('click', function() {
+      jsonProperties.classList.toggle('hidden');
+    });
+
+    // Export parsed JSON to local storage
+    exportBtn.addEventListener('click', function() {
+      const parsedJSON = JSON.parse(jsonInput.value);
+      localStorage.setItem('parsedJSON', JSON.stringify(parsedJSON));
+      alert('Parsed JSON exported to local storage!');
+    });
+    
+    // Generate JSON properties
+    function generateProperties(obj, parent = jsonProperties) {
+      parent.innerHTML = '';
+      
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          const value = obj[key];
+          
+          const propertyContainer = document.createElement('div');
+          propertyContainer.classList.add('json-property');
+          
+          const keyElement = document.createElement('span');
+          keyElement.classList.add('json-key');
+          keyElement.textContent = key + ': ';
+          
+          const valueElement = document.createElement('span');
+          
+          if (typeof value === 'object') {
+            valueElement.textContent = '{ ... }';
+            valueElement.classList.add('json-object');
+            generateProperties(value, propertyContainer);
+          } else {
+            valueElement.textContent = getValueString(value);
+          }
+          
+          propertyContainer.appendChild(keyElement);
+          propertyContainer.appendChild(valueElement);
+          parent.appendChild(propertyContainer);
+        }
+      }
+    }
+    
+    // Get string representation of different value types
+    function getValueString(value) {
+      if (typeof value === 'string') {
+        return '"' + value + '"';
+      } else if (typeof value === 'number') {
+        return value.toString();
+      } else if (typeof value === 'boolean') {
+        return value.toString();
+      } else {
+        return '';
+      }
+    }
+    
+    // Syntax highlighting for JSON output
+    function syntaxHighlight(json) {
+      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      });
+    }
+  </script>
+</body>
+</html>
